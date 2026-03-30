@@ -24,8 +24,12 @@ export function useSync() {
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [authError, setAuthError] = useState(false);
+
   async function login(pw: string) {
     try {
+      firstLoad.current = false;
+      setAuthError(false);
       const key = await deriveUserMasterKey(pw);
       const uid = await hashUserId(key);
       setMasterKey(key);
@@ -44,7 +48,8 @@ export function useSync() {
     firstLoad.current = true;
     (async () => {
       try {
-        const encryptedBlob = await fetchBlob(API_URL, userId);
+        const authKey = localStorage.getItem('parcel_auth_key') || undefined;
+        const encryptedBlob = await fetchBlob(API_URL, userId, authKey);
         if (encryptedBlob && active) {
           const decrypted = await decryptPayload(masterKey, encryptedBlob);
           lastSavedState.current = JSON.stringify(decrypted);
@@ -56,7 +61,17 @@ export function useSync() {
           setState(initial);
         }
       } catch (e: any) {
-        if (active) toast.error('Failed to load data: ' + e.message);
+        if (active) {
+          firstLoad.current = false;
+          setMasterKey(null);
+          setUserId(null);
+          if (e.message === 'ERR_UNAUTHORIZED') {
+            setAuthError(true);
+            toast.error('Invalid API Auth Key');
+          } else {
+            toast.error('Failed to load data: ' + e.message);
+          }
+        }
       }
     })();
     return () => { active = false; };
@@ -77,7 +92,8 @@ export function useSync() {
     setIsSyncing(true);
     try {
       const encryptedInfo = await encryptPayload(masterKey, currentState);
-      await saveBlob(API_URL, userId, encryptedInfo);
+      const authKey = localStorage.getItem('parcel_auth_key') || undefined;
+      await saveBlob(API_URL, userId, encryptedInfo, authKey);
       lastSavedState.current = currentStateStr;
     } catch (e: any) {
       console.error(e);
@@ -106,5 +122,5 @@ export function useSync() {
     };
   }, [state, userId, masterKey, forceSync]);
 
-  return { login, state, setState, isSyncing, hasSession: !!masterKey, forceSync };
+  return { login, state, setState, isSyncing, hasSession: !!masterKey, forceSync, authError };
 }

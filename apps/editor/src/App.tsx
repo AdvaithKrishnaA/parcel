@@ -33,11 +33,19 @@ import { createShare } from '@parcel/sync';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 
 function App() {
-  const { login, state, setState, isSyncing, hasSession, forceSync } = useSync();
+  const { login, state, setState, isSyncing, hasSession, forceSync, authError } = useSync();
   const [pw, setPw] = useState('');
+  const [authKey, setAuthKey] = useState(() => localStorage.getItem('parcel_auth_key') || '');
+  const [showAuthOptions, setShowAuthOptions] = useState(() => !localStorage.getItem('parcel_auth_key'));
   const [currentBundleId, setCurrentBundleId] = useState<string | null>(null);
   const [sharingId, setSharingId] = useState<string | null>(null);
   const [shareModalData, setShareModalData] = useState<{ url: string, id: string, key: string } | null>(null);
+
+  useEffect(() => {
+    if (authError) {
+      setShowAuthOptions(true);
+    }
+  }, [authError]);
 
   // Keyboard listener for Cmd/Ctrl + S
   useEffect(() => {
@@ -69,7 +77,11 @@ function App() {
                 <CardTitle className="text-xl">Hello, Friend.</CardTitle>
               </CardHeader>
               <CardContent>
-                <form onSubmit={e => { e.preventDefault(); login(pw); }}>
+                <form onSubmit={e => {
+                  e.preventDefault();
+                  localStorage.setItem('parcel_auth_key', authKey);
+                  login(pw);
+                }}>
                   <div className="grid gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="password">Vault Password</Label>
@@ -82,7 +94,57 @@ function App() {
                         autoFocus
                       />
                     </div>
-                    <Button type="submit" className="w-full">Login</Button>
+                    {!showAuthOptions && (
+                      <div className="flex justify-start mt-0">
+                        <button type="button" className="text-[11px] text-muted-foreground hover:text-foreground hover:underline transition-colors focus:outline-none focus:ring-1 focus:ring-ring rounded px-1" onClick={() => setShowAuthOptions(true)}>
+                          Need to Reset Auth Key? Click Here
+                        </button>
+                      </div>
+                    )}
+
+                    {showAuthOptions && (
+                      <div className="grid gap-2 mt-2">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="authKey">Parcel API Auth Key</Label>
+                          <button type="button" className="text-xs text-primary hover:underline" onClick={() => setAuthKey(crypto.randomUUID())}>
+                            Generate New Key
+                          </button>
+                        </div>
+                        <div className="flex gap-2">
+                          <Input
+                            id="authKey"
+                            type="password"
+                            required
+                            placeholder="Enter or Generate a Secure Key"
+                            value={authKey}
+                            onChange={e => setAuthKey(e.target.value)}
+                          />
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className="shrink-0 px-3 min-w-[60px]"
+                            disabled={!authKey}
+                            onClick={() => {
+                              navigator.clipboard.writeText(authKey);
+                              toast.success('Auth Key copied to clipboard!');
+                            }}
+                          >
+                            Copy
+                          </Button>
+                        </div>
+                        {authError && (
+                          <p className="text-[11px] text-destructive mt-1 font-medium">
+                            Check your API Auth Key and try again.
+                          </p>
+                        )}
+                        {authKey && (!localStorage.getItem('parcel_auth_key') || authKey !== localStorage.getItem('parcel_auth_key')) && (
+                          <p className="text-[11px] text-muted-foreground mt-1 leading-tight">
+                            Run <code className="bg-muted px-1 py-0.5 rounded text-foreground">npx wrangler secret put AUTH_KEY</code> in your terminal and paste this value, or add it via the Cloudflare Dashboard to lock it down.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    <Button type="submit" className="w-full mt-2">Login</Button>
                   </div>
                 </form>
               </CardContent>
@@ -104,7 +166,13 @@ function App() {
                 <div className="rounded-md border px-4 py-3 text-sm bg-card text-card-foreground">
                   <p className="font-medium">What is the Vault Password?</p>
                   <p className="text-muted-foreground mt-1">
-                    Your Vault Password unlocks a set of your saved links. You can use different passwords to create separate vaults.
+                    Unlocks your saved links. Different passwords create separate vaults. It can’t be recovered if lost.
+                  </p>
+                </div>
+                <div className="rounded-md border px-4 py-3 text-sm bg-card text-card-foreground">
+                  <p className="font-medium">What is the Auth Key?</p>
+                  <p className="text-muted-foreground mt-1">
+                    A secret key for authenticating API requests. It identifies you and your vaults, and can be changed anytime.
                   </p>
                 </div>
               </CollapsibleContent>
@@ -140,14 +208,22 @@ function App() {
       const folderKeyBytes = generateKey();
       const folderKeyStr = encodeBase64Url(folderKeyBytes);
       const cipher = await encryptPayload(folderKeyBytes, bundle);
-      const res = await createShare(API_URL, cipher);
+      const authHeaderKey = localStorage.getItem('parcel_auth_key') || undefined;
+      const res = await createShare(API_URL, cipher, authHeaderKey);
 
       const viewerUrl = import.meta.env.VITE_VIEWER_URL || 'http://localhost:5174';
       const baseShareUrl = `${viewerUrl}/${res.id}`;
       const shareUrl = `${baseShareUrl}#${folderKeyStr}`;
-      await navigator.clipboard.writeText(shareUrl);
+
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        toast.success('Bundle link generated and copied to clipboard.');
+      } catch (clipboardErr) {
+        // Safari blocks async clipboard writes. Fallback gracefully.
+        toast.success('Bundle link generated.');
+      }
+
       setShareModalData({ url: shareUrl, id: baseShareUrl, key: folderKeyStr });
-      toast.success('Share link generated and copied to clipboard!');
     } catch (e: any) {
       toast.error('Share failed: ' + e.message);
     } finally {

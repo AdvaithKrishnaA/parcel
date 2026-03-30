@@ -1,11 +1,12 @@
 export interface Env {
   BUCKET: R2Bucket;
+  AUTH_KEY?: string;
 }
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
 export default {
@@ -18,8 +19,22 @@ export default {
     const path = url.pathname;
 
     try {
+      const checkAuth = () => {
+        if (!env.AUTH_KEY) {
+          return new Response('Server Configuration Error: AUTH_KEY is not set on the Cloudflare Worker.', { status: 500, headers: CORS_HEADERS });
+        }
+        const header = request.headers.get('Authorization');
+        if (header !== `Bearer ${env.AUTH_KEY}`) {
+          return new Response('Unauthorized: Invalid or missing API Auth Key', { status: 401, headers: CORS_HEADERS });
+        }
+        return null;
+      };
+
       // POST /create (Editor only) -> creates a share link
       if (path === '/create' && request.method === 'POST') {
+        const authErr = checkAuth();
+        if (authErr) return authErr;
+
         const body = await request.json<any>();
         if (!body.blob_key) {
           return new Response('Missing blob_key', { status: 400, headers: CORS_HEADERS });
@@ -53,6 +68,9 @@ export default {
 
       // PUT /sync/:user_id (Editor only)
       if (path.startsWith('/sync/') && request.method === 'PUT') {
+        const authErr = checkAuth();
+        if (authErr) return authErr;
+
         const userId = path.split('/')[2];
         if (!userId) return new Response('Bad request', { status: 400, headers: CORS_HEADERS });
         const data = await request.text();
@@ -62,6 +80,9 @@ export default {
 
       // GET /sync/:user_id (Editor only)
       if (path.startsWith('/sync/') && request.method === 'GET') {
+        const authErr = checkAuth();
+        if (authErr) return authErr;
+
         const userId = path.split('/')[2];
         if (!userId) return new Response('Bad request', { status: 400, headers: CORS_HEADERS });
         const obj = await env.BUCKET.get(`sync/${userId}`);

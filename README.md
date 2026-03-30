@@ -19,12 +19,24 @@ Parcel is a self-hostable, end-to-end encrypted (E2EE) link bundle manager. It a
 ## Quick Deploy Guide
 **Prerequisites:** Node.js v18+, a Cloudflare Account, and Wrangler installed (`npx wrangler login`).
 
-### 1. Setup the Backend
-Initialize your Cloudflare R2 bucket and deploy the Worker:
+### 1. Generate Your API Auth Key
+Before deploying, you need to generate a secure key to lock down your backend so random people can't upload data to your Cloudflare account. 
+Start the local development server:
 ```bash
 npm install
+cd apps/editor && npm run dev
+```
+Open the **Editor** at `http://localhost:5173`. On the login screen, click **"Generate Secure Key"**. Click **Copy** to save it to your clipboard.
+
+### 2. Setup & Secure the Backend
+Now, initialize your Cloudflare R2 bucket, inject your newly copied Auth Key, and deploy the Worker:
+```bash
 npx wrangler r2 bucket create parcel-storage
 cd worker
+
+# It will prompt you for a value. Paste your copied Auth Key!
+npx wrangler secret put AUTH_KEY 
+
 npm run deploy
 ```
 *Note the URL it generates for you (e.g., `https://parcel-worker.yourdomain.workers.dev`).*
@@ -42,20 +54,9 @@ VITE_VIEWER_URL="https://viewer.yourdomain.com"
 *(The Editor requires `VITE_VIEWER_URL` so it natively formats the shareable links you generate!)*
 
 ### 3. Deploy the Apps
-Build all the frontend applications directly from the root folder:
+Run the following command to build and deploy the apps:
 ```bash
-npm run build
-```
-
-Then deploy the Editor and Viewer:
-```bash
-# Deploy Editor
-cd apps/editor
-npx wrangler deploy
-
-# Deploy Viewer
-cd ../viewer
-npx wrangler deploy
+npm run build && cd apps/editor && npx wrangler deploy && cd ../viewer && npx wrangler deploy
 ```
 
 ### 4. Install the Extension
