@@ -1,0 +1,110 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { deriveUserMasterKey, encryptPayload, decryptPayload, hashUserId } from '@parcel/crypto';
+import { fetchBlob, saveBlob } from '@parcel/sync';
+import type { BundlePayload } from '@parcel/types';
+import { toast } from 'sonner';
+
+export interface UserState {
+  version: 1;
+  bundles: Record<string, BundlePayload>;
+}
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
+
+export function useSync() {
+  const [masterKey, setMasterKey] = useState<Uint8Array | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [state, setState] = useState<UserState | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const firstLoad = useRef(false);
+  const lastSavedState = useRef<string | null>(null);
+
+  const stateRef = useRef(state);
+  useEffect(() => { stateRef.current = state; }, [state]);
+
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  async function login(pw: string) {
+    try {
+      const key = await deriveUserMasterKey(pw);
+      const uid = await hashUserId(key);
+      setMasterKey(key);
+      setUserId(uid);
+    } catch (e: any) {
+      toast.error('Login failed: ' + e.message);
+    }
+  }
+
+  // Load initial data
+  useEffect(() => {
+    if (!userId || !masterKey) return;
+    if (firstLoad.current) return;
+
+    let active = true;
+    firstLoad.current = true;
+    (async () => {
+      try {
+        const encryptedBlob = await fetchBlob(API_URL, userId);
+        if (encryptedBlob && active) {
+          const decrypted = await decryptPayload(masterKey, encryptedBlob);
+          lastSavedState.current = JSON.stringify(decrypted);
+          setState(decrypted);
+        } else if (active) {
+          // New user
+          const initial = { version: 1 as const, bundles: {} };
+          lastSavedState.current = JSON.stringify(initial);
+          setState(initial);
+        }
+      } catch (e: any) {
+        if (active) toast.error('Failed to load data: ' + e.message);
+      }
+    })();
+    return () => { active = false; };
+  }, [userId, masterKey]);
+
+  const forceSync = useCallback(async () => {
+    const currentState = stateRef.current;
+    if (!currentState || !userId || !masterKey) return;
+
+    const currentStateStr = JSON.stringify(currentState);
+    if (currentStateStr === lastSavedState.current) return;
+
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
+    setIsSyncing(true);
+    try {
+      const encryptedInfo = await encryptPayload(masterKey, currentState);
+      await saveBlob(API_URL, userId, encryptedInfo);
+      lastSavedState.current = currentStateStr;
+    } catch (e: any) {
+      console.error(e);
+      toast.error('Sync error: ' + e.message);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [userId, masterKey]);
+
+  // Save data debounced
+  useEffect(() => {
+    if (!state || !userId || !masterKey) return;
+
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    timeoutRef.current = setTimeout(() => {
+      forceSync();
+    }, 8000);
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [state, userId, masterKey, forceSync]);
+
+  return { login, state, setState, isSyncing, hasSession: !!masterKey, forceSync };
+}

@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Parcel Save",
+  "version": "1.0",
+  "description": "Quick capture and sync E2EE Link Bundles",
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "action": {
+    "default_popup": "index.html"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
+  }
+}

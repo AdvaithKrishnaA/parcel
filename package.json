@@ -1,0 +1,19 @@
+{
+  "name": "parcel",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "worker"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.2.2",
+    "tailwindcss": "^4.2.2",
+    "tailwindcss-animate": "^1.0.7"
+  }
+}
