@@ -1,71 +1,72 @@
-# Parcel Link Bundles
+# Parcel: End-to-End Encrypted Link Bundles
 
-Parcel is a self-hostable, end-to-end encrypted (E2EE) link bundle sharing system.
-It features strict separation of concerns, zero-knowledge backend, and encrypted synchronization.
+Parcel is a self-hostable, end-to-end encrypted (E2EE) link bundle manager. It allows you to group links, save them privately, and share them securely—all while verifying the server *never* sees your unencrypted data.
+
+## Features
+- **Zero-Knowledge Backend:** Powered by Cloudflare Workers & R2. It only stores heavily encrypted blobs.
+- **Client-Side Encryption:** Your data is encrypted locally using AES-GCM (256-bit) and Argon2id.
+- **Secure Sharing:** Shared links decrypt entirely in the browser. The decryption key is passed via the URL fragment (`#key`), which is completely invisible to the host server.
+- **Browser Extension:** Includes a native extension to seamlessly capture links directly into your secure vault.
 
 ## Architecture
-- **Server (`worker/`)**: Cloudflare Worker + R2. Dumb storage + policy enforcement. Does NOT access or inspect payloads.
-- **Editor (`apps/editor`)**: Private Vite+React app. Encrypts/decrypts state client-side using Argon2id/AES-GCM.
-- **Viewer (`apps/viewer`)**: Public link reader. Decrypts snapshots received via URL fragments. No authentication.
-- **Extension (`apps/extension`)**: Quick capture tool syncing the same encrypted state.
+- **Worker (`worker/`):** The dumb storage backend.
+- **Editor (`apps/editor`):** Your private dashboard to create and manage bundles.
+- **Viewer (`apps/viewer`):** The public, read-only interface where shared links are decrypted.
+- **Extension (`apps/extension`):** The browser extension.
 
-## Cryptography
-- Storage encryption uses `AES-GCM` (256-bit).
-- Key derivation uses `Argon2id` locally via WebAssembly, falling back to Web Crypto APIs.
-- Sharing payloads uses per-share 32-byte `folder_key` entirely exposed in the URL fragment (`#...`). Server never sees the fragment.
+---
 
-## Self-Hosting & Deployment
+## Quick Deploy Guide
+**Prerequisites:** Node.js v18+, a Cloudflare Account, and Wrangler installed (`npx wrangler login`).
 
-**Prerequisites:** Node.js v18+, Cloudflare Account (R2 enabled), `npx wrangler login`.
-
-### 1. Backend Setup
-
-Initialize your Cloudflare R2 structure and provision the Worker.
+### 1. Setup the Backend
+Initialize your Cloudflare R2 bucket and deploy the Worker:
 ```bash
 npm install
 npx wrangler r2 bucket create parcel-storage
 cd worker
 npm run deploy
 ```
-*Note the URL displayed by `wrangler deploy` (e.g. `https://parcel-worker.yourdomain.workers.dev`).*
+*Note the URL it generates for you (e.g., `https://parcel-worker.yourdomain.workers.dev`).*
 
-### 2. Configure Apps
-
-Create a `.env.local` inside `apps/editor`, `apps/viewer`, and `apps/extension` to point to the created Worker:
+### 2. Configure Environment Variables
+In `apps/editor/`, `apps/viewer/`, and `apps/extension/`, create a `.env.local` file (or append them to your `wrangler.toml` files for production):
 
 ```env
-VITE_API_URL=https://parcel-worker.yourdomain.workers.dev
+# Point this to the Cloudflare Worker URL you just deployed
+VITE_API_URL="https://parcel-worker.yourdomain.workers.dev"
+
+# Point this to where you plan to publicly host the Viewer application
+VITE_VIEWER_URL="https://viewer.yourdomain.com"
 ```
+*(The Editor requires `VITE_VIEWER_URL` so it natively formats the shareable links you generate!)*
 
-### 3. Build & Deploy Apps
-
-Build all applications from the root folder:
-
+### 3. Deploy the Apps
+Build all the frontend applications directly from the root folder:
 ```bash
 npm run build
 ```
 
-**Deploy Editor to Cloudflare Workers:**
+Then deploy the Editor and Viewer:
 ```bash
+# Deploy Editor
 cd apps/editor
 npx wrangler deploy
-```
 
-**Deploy Viewer to Cloudflare Workers:**
-```bash
+# Deploy Viewer
 cd ../viewer
 npx wrangler deploy
 ```
-*(Optionally setup custom domains so the Viewer links are short).*
 
-### 4. Build Chrome/Safari Extension
+### 4. Install the Extension
+Load the `apps/extension/dist` folder into Chrome/Brave/Arc as an "Unpacked Extension". It easily utilizes the exact same backend variables to sync securely!
 
-```bash
-cd apps/extension
-npm run build
-```
-Load the `apps/extension/dist` folder into Chrome as an Unpacked Extension.
+---
 
-## Usage Rules
-- All encryption is strictly client-side. If you lose your master password, your synced data is irrecoverable.
-- Server maintains purely encrypted blobs.
+## ⚠️ Important Warning
+**Don't lose your password.** All encryption strictly happens right on your device. The server literally cannot read your data. If you completely forget your master password, your saved bundles are cryptographically irrecoverable.
+
+---
+
+## License
+This project is licensed strictly under the [GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE).
