@@ -96,7 +96,6 @@ export function useSync() {
       await saveBlob(API_URL, userId, encryptedInfo, authKey);
       lastSavedState.current = currentStateStr;
     } catch (e: any) {
-      console.error(e);
       toast.error('Sync error: ' + e.message);
     } finally {
       setIsSyncing(false);
