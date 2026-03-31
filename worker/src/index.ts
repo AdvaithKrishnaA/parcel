@@ -40,8 +40,10 @@ export default {
           return new Response('Missing blob_key', { status: 400, headers: CORS_HEADERS });
         }
         
-        // simple 8-char random ID for URL
-        const id = Math.random().toString(36).substring(2, 10);
+        // cryptographically secure 8-char random ID for URL
+        const array = new Uint8Array(4);
+        crypto.getRandomValues(array);
+        const id = Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
         
         // store the encrypted payload itself directly in R2 or the blob_key 
         // We will store the encrypted payload string.
