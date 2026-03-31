@@ -4,7 +4,8 @@
   "types": "src/index.ts",
   "main": "src/index.ts",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "test": "node --experimental-strip-types --experimental-test-module-mocks src/index.spec.ts"
   },
   "dependencies": {
     "@parcel/types": "*",
