@@ -17,7 +17,11 @@ export function decodeBase64Url(base64: string): Uint8Array {
   const pad = str.length % 4;
   const padded = pad ? str + '='.repeat(4 - pad) : str;
   const bin = atob(padded);
-  return new Uint8Array(bin.length).map((_, i) => bin.charCodeAt(i));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) {
+    bytes[i] = bin.charCodeAt(i);
+  }
+  return bytes;
 }
 
 // Derive argon2id key from password
