@@ -6,30 +6,7 @@ import { Shield, ExternalLink } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-
-function getValidUrl(url: string) {
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
-      return parsed.href;
-    }
-  } catch {
-    // Fall back to https prefix
-  }
-  return `https://${url}`;
-}
-
-function getHostname(url: string) {
-  try {
-    return new URL(url).hostname;
-  } catch {
-    try {
-      return new URL(`https://${url}`).hostname;
-    } catch {
-      return url;
-    }
-  }
-}
+import { getValidUrl, getHostname } from '@/lib/urls';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 
