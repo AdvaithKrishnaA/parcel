@@ -9,10 +9,14 @@ import { Button } from '@/components/ui/button';
 
 function getValidUrl(url: string) {
   try {
-    return new URL(url).href;
+    const parsed = new URL(url);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return parsed.href;
+    }
   } catch {
-    return `https://${url}`;
+    // Fall back to https prefix
   }
+  return `https://${url}`;
 }
 
 function getHostname(url: string) {
