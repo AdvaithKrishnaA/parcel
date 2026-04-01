@@ -34,8 +34,8 @@ export function useSync() {
       const uid = await hashUserId(key);
       setMasterKey(key);
       setUserId(uid);
-    } catch (e: any) {
-      toast.error('Login failed: ' + e.message);
+    } catch (e: unknown) {
+      toast.error('Login failed: ' + (e instanceof Error ? e.message : String(e)));
     }
   }
 
@@ -60,16 +60,17 @@ export function useSync() {
           lastSavedState.current = JSON.stringify(initial);
           setState(initial);
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (active) {
           firstLoad.current = false;
           setMasterKey(null);
           setUserId(null);
-          if (e.message === 'ERR_UNAUTHORIZED') {
+          const message = e instanceof Error ? e.message : String(e);
+          if (message === 'ERR_UNAUTHORIZED') {
             setAuthError(true);
             toast.error('Invalid API Auth Key');
           } else {
-            toast.error('Failed to load data: ' + e.message);
+            toast.error('Failed to load data: ' + message);
           }
         }
       }
@@ -95,8 +96,8 @@ export function useSync() {
       const authKey = localStorage.getItem('parcel_auth_key') || undefined;
       await saveBlob(API_URL, userId, encryptedInfo, authKey);
       lastSavedState.current = currentStateStr;
-    } catch (e: any) {
-      toast.error('Sync error: ' + e.message);
+    } catch (e: unknown) {
+      toast.error('Sync error: ' + (e instanceof Error ? e.message : String(e)));
     } finally {
       setIsSyncing(false);
     }

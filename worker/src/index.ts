@@ -98,8 +98,8 @@ export default {
       }
 
       return new Response('Not found', { status: 404, headers: CORS_HEADERS });
-    } catch (e: any) {
-      return new Response(e.message, { status: 500, headers: CORS_HEADERS });
+    } catch (e: unknown) {
+      return new Response(e instanceof Error ? e.message : String(e), { status: 500, headers: CORS_HEADERS });
     }
   },
 };

@@ -60,8 +60,8 @@ function App() {
       const url = `${viewerUrl}/${res.id}#${encodeBase64Url(folderKey)}`;
       await navigator.clipboard.writeText(url);
       alert('Shared link copied: ' + url);
-    } catch (e: any) {
-      alert('Error sharing: ' + e.message);
+    } catch (e: unknown) {
+      alert('Error sharing: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 
