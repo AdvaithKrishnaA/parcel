@@ -50,7 +50,7 @@ export async function importGcmKey(rawKey: Uint8Array): Promise<CryptoKey> {
 }
 
 // Encrypt payload with AES-GCM
-export async function encryptPayload(key: Uint8Array, data: any): Promise<string> {
+export async function encryptPayload(key: Uint8Array, data: unknown): Promise<string> {
   const cryptoKey = await importGcmKey(key);
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const encoded = new TextEncoder().encode(JSON.stringify(data));
@@ -68,7 +68,7 @@ export async function encryptPayload(key: Uint8Array, data: any): Promise<string
 }
 
 // Decrypt payload with AES-GCM
-export async function decryptPayload(key: Uint8Array, cipherBase64: string): Promise<any> {
+export async function decryptPayload(key: Uint8Array, cipherBase64: string): Promise<unknown> {
   const cryptoKey = await importGcmKey(key);
   const combined = decodeBase64Url(cipherBase64);
   const iv = combined.slice(0, 12);

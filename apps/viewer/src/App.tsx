@@ -62,7 +62,7 @@ function App() {
 
       try {
         const folderKey = decodeBase64Url(hashStr);
-        const data = await decryptPayload(folderKey, cipherBase64);
+        const data = (await decryptPayload(folderKey, cipherBase64)) as BundlePayload;
         setBundle(data);
 
         if (providedKey && window.location.hash.slice(1) !== providedKey) {
