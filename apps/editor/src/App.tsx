@@ -224,8 +224,8 @@ function App() {
       }
 
       setShareModalData({ url: shareUrl, id: baseShareUrl, key: folderKeyStr });
-    } catch (e: any) {
-      toast.error('Share failed: ' + e.message);
+    } catch (e: unknown) {
+      toast.error('Share failed: ' + (e instanceof Error ? e.message : String(e)));
     } finally {
       setSharingId(null);
     }
