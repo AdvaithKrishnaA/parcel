@@ -51,7 +51,7 @@ export function useSync() {
         const authKey = localStorage.getItem('parcel_auth_key') || undefined;
         const encryptedBlob = await fetchBlob(API_URL, userId, authKey);
         if (encryptedBlob && active) {
-          const decrypted = await decryptPayload(masterKey, encryptedBlob);
+          const decrypted = (await decryptPayload(masterKey, encryptedBlob)) as UserState;
           lastSavedState.current = JSON.stringify(decrypted);
           setState(decrypted);
         } else if (active) {
