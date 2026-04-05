@@ -25,7 +25,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Spinner } from '@/components/ui/spinner';
 import type { BundlePayload } from '@parcel/types';
-import { Plus, Trash2, Share, PlusCircle, RefreshCw, GalleryVerticalEnd, ChevronDown, Edit } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Plus, Trash2, Share, PlusCircle, RefreshCw, GalleryVerticalEnd, ChevronDown, Edit, Eye, EyeOff } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import { generateKey, encodeBase64Url, encryptPayload } from '@parcel/crypto';
 import { createShare } from '@parcel/sync';
@@ -257,44 +258,89 @@ function App() {
             </div>
 
             <div className="space-y-4 mb-6">
-              {currentBundle.items.map((item, idx) => (
-                <Card key={item.id} className="bg-card border-border relative overflow-hidden">
-                  <div className="p-4 flex gap-4">
-                    <div className="flex-1 space-y-3">
-                      <Input placeholder="URL" value={item.url} onChange={e => {
-                        const newItems = [...currentBundle.items];
-                        newItems[idx].url = e.target.value;
-                        setState({ ...state, bundles: { ...state.bundles, [currentBundleId!]: { ...currentBundle, items: newItems } } });
-                      }} className="bg-background border-input" />
-                      <div className="flex gap-2">
-                        <Input placeholder="Title (optional)" value={item.title || ''} onChange={e => {
+              {currentBundle.items.map((item, idx) => {
+                const itemType = item.type || 'link';
+                return (
+                  <Card key={item.id} className="bg-card border-border relative overflow-hidden">
+                    <div className="p-4 flex flex-col gap-4">
+                      <div className="flex gap-4 justify-between items-center">
+                        <Tabs value={itemType} onValueChange={(v) => {
                           const newItems = [...currentBundle.items];
-                          newItems[idx].title = e.target.value;
+                          newItems[idx] = { ...newItems[idx], type: v as any };
                           setState({ ...state, bundles: { ...state.bundles, [currentBundleId!]: { ...currentBundle, items: newItems } } });
-                        }} className="bg-background border-input flex-1" />
-                        <Input placeholder="Note (optional)" value={item.note || ''} onChange={e => {
-                          const newItems = [...currentBundle.items];
-                          newItems[idx].note = e.target.value;
+                        }} className="w-[300px]">
+                          <TabsList className="grid grid-cols-3">
+                            <TabsTrigger value="link">Link</TabsTrigger>
+                            <TabsTrigger value="text">Text</TabsTrigger>
+                            <TabsTrigger value="secret">Secret</TabsTrigger>
+                          </TabsList>
+                        </Tabs>
+                        <Button variant="ghost" size="icon" className="shrink-0 text-destructive hover:bg-destructive/10" onClick={() => {
+                          const newItems = currentBundle.items.filter((_, i) => i !== idx);
                           setState({ ...state, bundles: { ...state.bundles, [currentBundleId!]: { ...currentBundle, items: newItems } } });
-                        }} className="bg-background border-input flex-1" />
+                        }}>
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
+                      <div className="flex-1 space-y-3">
+                        {itemType === 'link' && (
+                          <Input placeholder="URL" value={item.url || ''} onChange={e => {
+                            const newItems = [...currentBundle.items];
+                            newItems[idx].url = e.target.value;
+                            setState({ ...state, bundles: { ...state.bundles, [currentBundleId!]: { ...currentBundle, items: newItems } } });
+                          }} className="bg-background border-input" />
+                        )}
+                        {itemType === 'text' && (
+                          <Textarea placeholder="Text content" value={item.content || ''} onChange={e => {
+                            const newItems = [...currentBundle.items];
+                            newItems[idx].content = e.target.value;
+                            setState({ ...state, bundles: { ...state.bundles, [currentBundleId!]: { ...currentBundle, items: newItems } } });
+                          }} className="bg-background border-input min-h-[80px]" />
+                        )}
+                        {itemType === 'secret' && (
+                          <div className="relative">
+                            <Input type={item.mode === 'hidden' ? "password" : "text"} placeholder="Secret text" value={item.content || ''} onChange={e => {
+                              const newItems = [...currentBundle.items];
+                              newItems[idx].content = e.target.value;
+                              setState({ ...state, bundles: { ...state.bundles, [currentBundleId!]: { ...currentBundle, items: newItems } } });
+                            }} className="bg-background border-input pr-10" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newItems = [...currentBundle.items];
+                                newItems[idx].mode = item.mode === 'hidden' ? 'visible' : 'hidden';
+                                setState({ ...state, bundles: { ...state.bundles, [currentBundleId!]: { ...currentBundle, items: newItems } } });
+                              }}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                            >
+                              {item.mode === 'hidden' ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
+                            </button>
+                          </div>
+                        )}
+                        <div className="flex gap-2">
+                          <Input placeholder="Title (optional)" value={item.title || ''} onChange={e => {
+                            const newItems = [...currentBundle.items];
+                            newItems[idx].title = e.target.value;
+                            setState({ ...state, bundles: { ...state.bundles, [currentBundleId!]: { ...currentBundle, items: newItems } } });
+                          }} className="bg-background border-input flex-1" />
+                          <Input placeholder="Note (optional)" value={item.note || ''} onChange={e => {
+                            const newItems = [...currentBundle.items];
+                            newItems[idx].note = e.target.value;
+                            setState({ ...state, bundles: { ...state.bundles, [currentBundleId!]: { ...currentBundle, items: newItems } } });
+                          }} className="bg-background border-input flex-1" />
+                        </div>
                       </div>
                     </div>
-                    <Button variant="ghost" size="icon" className="shrink-0 text-destructive hover:bg-destructive/10" onClick={() => {
-                      const newItems = currentBundle.items.filter((_, i) => i !== idx);
-                      setState({ ...state, bundles: { ...state.bundles, [currentBundleId!]: { ...currentBundle, items: newItems } } });
-                    }}>
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </div>
 
             <Button variant="outline" className="w-full border-dashed border-border hover:bg-accent text-muted-foreground hover:text-accent-foreground" onClick={() => {
-              const newItems = [...currentBundle.items, { id: crypto.randomUUID(), url: '', title: null, note: null, mode: 'hidden' as const }];
+              const newItems = [...currentBundle.items, { id: crypto.randomUUID(), type: 'link' as const, url: '', content: '', title: null, note: null, mode: 'hidden' as const }];
               setState({ ...state, bundles: { ...state.bundles, [currentBundleId!]: { ...currentBundle, items: newItems } } });
             }}>
-              <PlusCircle className="size-4 mr-2" /> Add Link
+              <PlusCircle className="size-4 mr-2" /> Add Item
             </Button>
           </div>
         ) : (

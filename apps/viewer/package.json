@@ -16,6 +16,7 @@
     "@parcel/crypto": "file:../../packages/crypto",
     "@parcel/sync": "file:../../packages/sync",
     "@parcel/types": "file:../../packages/types",
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@tailwindcss/vite": "^4.2.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

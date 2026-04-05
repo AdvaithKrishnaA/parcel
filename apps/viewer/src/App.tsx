@@ -2,13 +2,48 @@ import { useState, useEffect } from 'react';
 import { decryptPayload, decodeBase64Url } from '@parcel/crypto';
 import { fetchShare } from '@parcel/sync';
 import { BundlePayload } from '@parcel/types';
-import { Shield, ExternalLink } from 'lucide-react';
+import { Shield, ExternalLink, Copy, Eye, EyeOff, Check } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { getValidUrl, getHostname } from '@/lib/urls';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
+
+function SecretViewer({ content }: { content: string }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="mt-2 flex items-center gap-2 bg-muted/50 p-1 rounded-md border border-border/50">
+      <Input
+        type={show ? "text" : "password"}
+        value={content}
+        readOnly
+        className="bg-transparent border-0 focus-visible:ring-0 px-2 text-zinc-300 h-8"
+      />
+      <Button variant="ghost" size="icon" className="size-8 shrink-0 hover:bg-accent text-muted-foreground" onClick={() => setShow(!show)}>
+        {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+      </Button>
+    </div>
+  );
+}
+
+function CopyButton({ textToCopy }: { textToCopy: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigator.clipboard.writeText(textToCopy).catch(() => { });
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <Button variant="outline" size="icon" className={`size-9 bg-card transition-colors ${copied ? 'border-emerald-500/50 text-emerald-500 hover:bg-card hover:text-emerald-500' : 'border-border hover:bg-accent text-muted-foreground'}`} onClick={handleCopy} title="Copy">
+      {copied ? <Check className="size-4 animate-in zoom-in duration-200" /> : <Copy className="size-4" />}
+    </Button>
+  );
+}
 
 function App() {
   const [bundle, setBundle] = useState<BundlePayload | null>(null);
@@ -64,10 +99,10 @@ function App() {
 
   if (isMissingKey) {
     return (
-      <div className="flex flex-col h-screen items-center justify-center bg-zinc-950 text-zinc-50 font-sans p-6 text-center dark">
+      <div className="flex flex-col h-screen items-center justify-center bg-background text-foreground font-sans p-6 text-center">
         <Shield className="size-12 mb-4 text-emerald-500 opacity-50" />
         <h1 className="text-2xl font-bold mb-4">Unlock Collection</h1>
-        <p className="max-w-md text-zinc-400 mb-8">This collection is securely encrypted. Please enter the decryption key to view its contents.</p>
+        <p className="max-w-md text-muted-foreground mb-8">This collection is securely encrypted. Please enter the decryption key to view its contents.</p>
         <div className="flex w-full max-w-sm items-center space-x-2">
           <Input
             type="password"
@@ -75,7 +110,7 @@ function App() {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && load(inputValue)}
-            className="text-white border-zinc-700 bg-zinc-900"
+            className="text-foreground border-border bg-card"
           />
           <Button onClick={() => load(inputValue)}>Unlock</Button>
         </div>
@@ -86,7 +121,7 @@ function App() {
 
   if (error) {
     return (
-      <div className="flex flex-col h-screen items-center justify-center bg-zinc-950 text-red-400 font-sans p-6 text-center">
+      <div className="flex flex-col h-screen items-center justify-center bg-background text-destructive font-sans p-6 text-center">
         <Shield className="size-12 mb-4 text-red-500 opacity-50" />
         <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
         <p className="max-w-md">{error}</p>
@@ -96,7 +131,7 @@ function App() {
 
   if (!bundle) {
     return (
-      <div className="flex h-screen items-center justify-center bg-zinc-950 text-zinc-400 font-sans">
+      <div className="flex h-screen items-center justify-center bg-background text-muted-foreground font-sans">
         <div className="animate-pulse flex items-center gap-2">
           <Shield className="size-5" /> Decrypting Secure Link...
         </div>
@@ -105,29 +140,54 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans p-6 dark">
+    <div className="min-h-screen bg-background text-foreground font-sans p-6">
       <div className="max-w-3xl mx-auto py-12">
         <div className="mb-10 text-center">
-          <h1 className="text-4xl font-bold tracking-tight mb-2">{bundle.name || 'Secure Link Bundle'}</h1>
+          <h1 className="text-4xl font-medium mb-2">{bundle.name || 'Shared Collection'}</h1>
         </div>
 
         <div className="grid gap-4">
           {bundle.items.map((item) => {
-            const validUrl = getValidUrl(item.url);
-            const hostname = getHostname(item.url);
+            const itemType = item.type || 'link';
+            const isLink = itemType === 'link';
+            const validUrl = isLink && item.url ? getValidUrl(item.url) : '';
+            const hostname = isLink && item.url ? getHostname(item.url) : '';
+            const textToCopy = isLink ? (item.url || '') : (item.content || '');
+
             return (
-              <a key={item.id} href={validUrl} target="_blank" rel="noopener noreferrer" className="block p-5 rounded-xl border border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 transition shadow-sm hover:shadow-md">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-lg font-semibold text-white mb-1 group-hover:text-blue-400 transition-colors">
-                      {item.title || hostname}
+              <div key={item.id} className="block p-5 rounded-xl border border-border bg-card hover:bg-accent/50 transition shadow-sm hover:shadow-md group">
+                <div className="flex justify-between items-start gap-4">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-medium text-foreground mb-1 group-hover:text-primary transition-colors">
+                      {item.title || (isLink ? hostname : (itemType === 'text' ? 'Text Note' : 'Secret'))}
                     </h3>
-                    {item.note && <p className="text-zinc-400 text-sm mb-2">{item.note}</p>}
-                    <p className="text-xs text-zinc-500 truncate max-w-sm">{item.mode === 'hidden' ? hostname : validUrl}</p>
+                    {item.note && <p className="text-muted-foreground text-sm mb-2">{item.note}</p>}
+
+                    {itemType === 'link' && (
+                      <p className="text-xs text-muted-foreground truncate">{item.mode === 'hidden' ? hostname : validUrl}</p>
+                    )}
+
+                    {itemType === 'text' && (
+                      <div className="mt-2 text-sm text-foreground whitespace-pre-wrap bg-muted/50 p-3 rounded-md border border-border/50 max-h-60 overflow-y-auto">
+                        {item.content || ''}
+                      </div>
+                    )}
+
+                    {itemType === 'secret' && (
+                      <SecretViewer content={item.content || ''} />
+                    )}
                   </div>
-                  <ExternalLink className="size-5 text-zinc-600 group-hover:text-zinc-300" />
+
+                  <div className="flex shrink-0 gap-2">
+                    <CopyButton textToCopy={textToCopy} />
+                    {isLink && (
+                      <Button variant="outline" size="icon" className="size-9 bg-card border-border hover:bg-accent text-muted-foreground" onClick={() => window.open(validUrl, '_blank')} title="Open">
+                        <ExternalLink className="size-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              </a>
+              </div>
             );
           })}
         </div>

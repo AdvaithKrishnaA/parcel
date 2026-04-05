@@ -1,8 +1,11 @@
 export type BundleItemMode = 'hidden' | 'visible';
+export type BundleItemType = 'link' | 'text' | 'secret';
 
 export interface BundleItem {
   id: string;
-  url: string;
+  type?: BundleItemType;
+  url?: string;
+  content?: string;
   title: string | null;
   note: string | null;
   mode: BundleItemMode;
