@@ -3,6 +3,11 @@
   "name": "Parcel Save",
   "version": "1.0",
   "description": "Quick capture and sync E2EE Link Bundles",
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  },
   "permissions": [
     "activeTab",
     "storage"
