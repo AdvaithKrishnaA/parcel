@@ -3,6 +3,7 @@ import { decryptPayload, decodeBase64Url } from '@parcel/crypto';
 import { fetchShare } from '@parcel/sync';
 import { BundlePayload } from '@parcel/types';
 import { Shield, ExternalLink, Copy, Eye, EyeOff, Check } from 'lucide-react';
+import { Logo } from '@/components/ui/logo';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -192,12 +193,15 @@ function App() {
           })}
         </div>
 
-        <Card className="mt-16 gap-0 w-full max-w-md mx-auto bg-transparent border-border shadow-none p-6 flex flex-col items-center text-center">
-          <div className="bg-muted p-2 rounded-full mb-2">
-            <Shield className="size-5 text-muted-foreground" />
+        <Card className="mt-16 w-full max-w-md mx-auto bg-transparent border-border shadow-none p-6 flex flex-col items-center text-center">
+          <div className="flex flex-col items-center justify-center mb-6 opacity-70 hover:opacity-100 transition-opacity">
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-3">Powered by</span>
+            <Logo className="h-5 w-auto text-foreground" />
           </div>
-          <h3 className="text-base font-semibold text-foreground mb-4 whitespace-nowrap">Powered by Parcel</h3>
-          <p className="text-sm text-muted-foreground">
+          <div className="bg-muted p-2 rounded-full mb-3">
+            <Shield className="size-4 text-muted-foreground" />
+          </div>
+          <p className="text-xs text-muted-foreground max-w-[250px]">
             This entire collection is end-to-end encrypted. The server cannot read its contents.
           </p>
         </Card>

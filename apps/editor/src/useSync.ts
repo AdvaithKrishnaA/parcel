@@ -122,5 +122,21 @@ export function useSync() {
     };
   }, [state, userId, masterKey, forceSync]);
 
+  // Prevent accidental tab closure if there are unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!stateRef.current || !lastSavedState.current) return;
+      
+      const currentStateStr = JSON.stringify(stateRef.current);
+      if (currentStateStr !== lastSavedState.current) {
+        e.preventDefault();
+        e.returnValue = ''; // Required for Chrome / modern browsers to show the prompt
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
+
   return { login, state, setState, isSyncing, hasSession: !!masterKey, forceSync, authError };
 }

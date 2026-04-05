@@ -26,7 +26,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Spinner } from '@/components/ui/spinner';
 import type { BundlePayload } from '@parcel/types';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, Share, PlusCircle, RefreshCw, GalleryVerticalEnd, ChevronDown, Edit, Eye, EyeOff } from 'lucide-react';
+import { Plus, Trash2, Share, PlusCircle, RefreshCw, ChevronDown, Edit, Eye, EyeOff } from 'lucide-react';
+import { Logo } from '@/components/ui/logo';
 import { toast, Toaster } from 'sonner';
 import { generateKey, encodeBase64Url, encryptPayload } from '@parcel/crypto';
 import { createShare } from '@parcel/sync';
@@ -66,11 +67,8 @@ function App() {
       <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
         <Toaster />
         <div className="flex w-full max-w-sm flex-col gap-6">
-          <div className="flex items-center gap-2 self-center font-medium">
-            <div className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <GalleryVerticalEnd className="size-4" />
-            </div>
-            PARCEL • Vault
+          <div className="flex items-center justify-center self-center mb-2">
+            <Logo className="h-8 w-auto text-foreground" />
           </div>
           <div className="flex flex-col gap-6">
             <Card className="gap-6">
@@ -161,13 +159,13 @@ function App() {
                 <div className="rounded-md border px-4 py-3 text-sm bg-card text-card-foreground">
                   <p className="font-medium">What is Parcel?</p>
                   <p className="text-muted-foreground mt-1">
-                    Parcel is a simple way to wrap links and send them securely. Think of it like sending a sealed package — but for URLs.
+                    Parcel is a simple way (kind of) to wrap links/secrets/texts and send them securely.
                   </p>
                 </div>
                 <div className="rounded-md border px-4 py-3 text-sm bg-card text-card-foreground">
                   <p className="font-medium">What is the Vault Password?</p>
                   <p className="text-muted-foreground mt-1">
-                    Unlocks your saved links. Different passwords create separate vaults. It can’t be recovered if lost.
+                    Unlocks your saved collections. Different passwords create separate vaults. It can’t be recovered if lost.
                   </p>
                 </div>
                 <div className="rounded-md border px-4 py-3 text-sm bg-card text-card-foreground">
@@ -218,10 +216,10 @@ function App() {
 
       try {
         await navigator.clipboard.writeText(shareUrl);
-        toast.success('Bundle link generated and copied to clipboard.');
+        toast.success('Share link copied to clipboard');
       } catch (clipboardErr) {
         // Safari blocks async clipboard writes. Fallback gracefully.
-        toast.success('Bundle link generated.');
+        toast.success('Share link generated');
       }
 
       setShareModalData({ url: shareUrl, id: baseShareUrl, key: folderKeyStr });
@@ -237,7 +235,10 @@ function App() {
       <Toaster />
       <div className="max-w-4xl mx-auto">
         <header className="flex items-center justify-between mb-8 pb-4 border-b border-border">
-          <h1 className="text-xl tracking-tight cursor-pointer" onClick={() => setCurrentBundleId(null)}>PARCEL • Vault</h1>
+          <div className="flex items-center cursor-pointer" onClick={() => setCurrentBundleId(null)}>
+            <Logo className="h-6 w-auto text-foreground" />
+            <span className="ml-3 font-medium text-muted-foreground text-lg tracking-wide hidden sm:inline-block">•  Vault</span>
+          </div>
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             {isSyncing ? <span className="flex items-center gap-2"><RefreshCw className="size-4 animate-spin" /> Syncing</span> : 'Synced'}
           </div>
@@ -355,7 +356,7 @@ function App() {
                   <div onClick={() => setCurrentBundleId(id)}>
                     <CardHeader className="m-2 p-2 border-none rounded flex-1 cursor-pointer hover:bg-muted/20 transition-colors">
                       <CardTitle className="text-lg text-card-foreground truncate">{bundle.name || 'Untitled Collection'}</CardTitle>
-                      <CardDescription>{bundle.items.length} link{bundle.items.length !== 1 ? 's' : ''}</CardDescription>
+                      <CardDescription>{bundle.items.length} item{bundle.items.length !== 1 ? 's' : ''}</CardDescription>
                     </CardHeader>
                   </div>
                   <div className="px-2 pt-2 border-t border-border flex items-center justify-between">
@@ -424,7 +425,7 @@ function App() {
                   <Button variant="ghost" onClick={() => setShareModalData(null)}>Close</Button>
                   <Button onClick={() => {
                     navigator.clipboard.writeText(shareModalData?.url || '');
-                    toast.success('Link copied to clipboard!');
+                    toast.success('Link copied to clipboard');
                   }}>Copy Link</Button>
                 </div>
               </div>

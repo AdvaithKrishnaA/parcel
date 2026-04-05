@@ -1,12 +1,14 @@
-# Parcel: End-to-End Encrypted Link Bundles
+# Parcel: Shareable End-to-End Encrypted Collections
 
-Parcel is a self-hostable, end-to-end encrypted (E2EE) link bundle manager. It allows you to group links, save them privately, and share them securely—all while verifying the server *never* sees your unencrypted data.
+![Parcel Cover](cover.png)
+
+Parcel is a self-hostable, end-to-end encrypted (E2EE) collection manager. It allows you to gather links, text notes, and secure secrets into bundles, save them privately, and share them securely—all while verifying the server *never* sees your unencrypted data.
 
 ## Features
 - **Zero-Knowledge Backend:** Powered by Cloudflare Workers & R2. It only stores heavily encrypted blobs.
 - **Client-Side Encryption:** Your data is encrypted locally using AES-GCM (256-bit) and Argon2id.
 - **Secure Sharing:** Shared links decrypt entirely in the browser. The decryption key is passed via the URL fragment (`#key`), which is completely invisible to the host server.
-- **Browser Extension:** Includes a native extension to seamlessly capture links directly into your secure vault.
+- **Browser Extension:** Includes a native extension to seamlessly capture links and resources directly into your secure vault.
 
 ## Architecture
 - **Worker (`worker/`):** The dumb storage backend.
