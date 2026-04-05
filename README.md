@@ -1,8 +1,10 @@
-# Parcel: Shareable End-to-End Encrypted Collections
+# Parcel
 
 ![Parcel Cover](cover.png)
 
 Parcel is a self-hostable, end-to-end encrypted (E2EE) collection manager. It allows you to gather links, text notes, and secure secrets into bundles, save them privately, and share them securely—all while verifying the server *never* sees your unencrypted data.
+
+<!--ARCADE EMBED START--><div style="position: relative; padding-bottom: calc(56.8587% + 41px); height: 0px; width: 100%;"><iframe src="https://demo.arcade.software/IMI2hsPKpcfxKgA6pZq6?embed&embed_mobile=inline&embed_desktop=inline&show_copy_link=true" title="Share Data Securely with PARCEL" frameborder="0" loading="lazy" webkitallowfullscreen mozallowfullscreen allowfullscreen allow="clipboard-write" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; color-scheme: light;" ></iframe></div><!--ARCADE EMBED END-->
 
 ## Features
 - **Zero-Knowledge Backend:** Powered by Cloudflare Workers & R2. It only stores heavily encrypted blobs.
