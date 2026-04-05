@@ -78,8 +78,8 @@ export function useSync() {
     return () => { active = false; };
   }, [userId, masterKey]);
 
-  const forceSync = useCallback(async () => {
-    const currentState = stateRef.current;
+  const forceSync = useCallback(async (newStateOverride?: UserState) => {
+    const currentState = newStateOverride || stateRef.current;
     if (!currentState || !userId || !masterKey) return;
 
     const currentStateStr = JSON.stringify(currentState);
