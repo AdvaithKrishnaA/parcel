@@ -1,6 +1,10 @@
 export function getValidUrl(url: string) {
     try {
-        return new URL(url).href;
+        const parsed = new URL(url);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+            return `https://${url}`;
+        }
+        return parsed.href;
     } catch {
         return `https://${url}`;
     }
