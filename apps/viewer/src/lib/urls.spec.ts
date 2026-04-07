@@ -28,6 +28,11 @@ describe('URL Helpers', () => {
         test('should handle empty string', () => {
             assert.strictEqual(getValidUrl(''), 'https://');
         });
+
+        test('should neutralize javascript protocol to prevent XSS', () => {
+            assert.strictEqual(getValidUrl('javascript:alert("XSS")'), 'https://javascript:alert("XSS")');
+            assert.strictEqual(getValidUrl('javascript://alert("XSS")'), 'https://javascript://alert("XSS")');
+        });
     });
 
     describe('getHostname', () => {
