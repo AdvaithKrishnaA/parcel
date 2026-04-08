@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { decryptPayload, decodeBase64Url } from '@parcel/crypto';
 import { fetchShare } from '@parcel/sync';
 import { BundlePayload } from '@parcel/types';
@@ -49,6 +49,22 @@ function CopyButton({ textToCopy }: { textToCopy: string }) {
 function App() {
   const [bundle, setBundle] = useState<BundlePayload | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const memoizedItems = useMemo(() => {
+    if (!bundle) return [];
+    return bundle.items.map((item) => {
+      const itemType = item.type || 'link';
+      const isLink = itemType === 'link';
+      return {
+        ...item,
+        itemType,
+        isLink,
+        validUrl: isLink && item.url ? getValidUrl(item.url) : '',
+        hostname: isLink && item.url ? getHostname(item.url) : '',
+        textToCopy: isLink ? (item.url || '') : (item.content || ''),
+      };
+    });
+  }, [bundle]);
 
   const [isMissingKey, setIsMissingKey] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -148,41 +164,35 @@ function App() {
         </div>
 
         <div className="grid gap-4">
-          {bundle.items.map((item) => {
-            const itemType = item.type || 'link';
-            const isLink = itemType === 'link';
-            const validUrl = isLink && item.url ? getValidUrl(item.url) : '';
-            const hostname = isLink && item.url ? getHostname(item.url) : '';
-            const textToCopy = isLink ? (item.url || '') : (item.content || '');
-
+          {memoizedItems.map((item) => {
             return (
               <div key={item.id} className="block p-5 rounded-xl border border-border bg-card hover:bg-accent/50 transition shadow-sm hover:shadow-md group">
                 <div className="flex justify-between items-start gap-4">
                   <div className="flex-1 min-w-0">
                     <h3 className="text-lg font-medium text-foreground mb-1 group-hover:text-primary transition-colors">
-                      {item.title || (isLink ? hostname : (itemType === 'text' ? 'Text Note' : 'Secret'))}
+                      {item.title || (item.isLink ? item.hostname : (item.itemType === 'text' ? 'Text Note' : 'Secret'))}
                     </h3>
                     {item.note && <p className="text-muted-foreground text-sm mb-2">{item.note}</p>}
 
-                    {itemType === 'link' && (
-                      <p className="text-xs text-muted-foreground truncate">{item.mode === 'hidden' ? hostname : validUrl}</p>
+                    {item.itemType === 'link' && (
+                      <p className="text-xs text-muted-foreground truncate">{item.mode === 'hidden' ? item.hostname : item.validUrl}</p>
                     )}
 
-                    {itemType === 'text' && (
+                    {item.itemType === 'text' && (
                       <div className="mt-2 text-sm text-foreground whitespace-pre-wrap bg-muted/50 p-3 rounded-md border border-border/50 max-h-60 overflow-y-auto">
                         {item.content || ''}
                       </div>
                     )}
 
-                    {itemType === 'secret' && (
+                    {item.itemType === 'secret' && (
                       <SecretViewer content={item.content || ''} />
                     )}
                   </div>
 
                   <div className="flex shrink-0 gap-2">
-                    <CopyButton textToCopy={textToCopy} />
-                    {isLink && (
-                      <Button variant="outline" size="icon" className="size-9 bg-card border-border hover:bg-accent text-muted-foreground" onClick={() => window.open(validUrl, '_blank')} title="Open">
+                    <CopyButton textToCopy={item.textToCopy} />
+                    {item.isLink && (
+                      <Button variant="outline" size="icon" className="size-9 bg-card border-border hover:bg-accent text-muted-foreground" onClick={() => window.open(item.validUrl, '_blank')} title="Open">
                         <ExternalLink className="size-4" />
                       </Button>
                     )}
