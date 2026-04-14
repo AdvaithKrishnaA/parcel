@@ -7,7 +7,7 @@ mock.module('hash-wasm', {
   },
 });
 
-import { encryptPayload, decryptPayload, generateKey } from './index';
+import { encryptPayload, decryptPayload, generateKey } from './index.ts';
 import assert from 'node:assert';
 
 describe('AES-GCM Encryption', () => {
