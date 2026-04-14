@@ -8,13 +8,7 @@ export function generateKey(): Uint8Array {
 }
 
 export function encodeBase64Url(bytes: Uint8Array): string {
-  const CHUNK_SIZE = 8192;
-  let binString = '';
-  for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
-    const chunk = bytes.subarray(i, i + CHUNK_SIZE);
-    // @ts-expect-error - apply accepts numeric array or typed array in modern environments
-    binString += String.fromCharCode.apply(null, chunk);
-  }
+  const binString = Array.from(bytes, (byte) => String.fromCharCode(byte)).join('');
   return btoa(binString).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 

@@ -7,6 +7,10 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none';",
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
 };
 
 export default {
@@ -99,7 +103,8 @@ export default {
 
       return new Response('Not found', { status: 404, headers: CORS_HEADERS });
     } catch (e: unknown) {
-      return new Response(e instanceof Error ? e.message : String(e), { status: 500, headers: CORS_HEADERS });
+      console.error('Worker fetch error:', e);
+      return new Response('Internal Server Error', { status: 500, headers: CORS_HEADERS });
     }
   },
 };
