@@ -44,8 +44,8 @@ export default {
           return new Response('Missing blob_key', { status: 400, headers: CORS_HEADERS });
         }
         
-        // cryptographically secure 8-char random ID for URL
-        const array = new Uint8Array(4);
+        // cryptographically secure 32-char random ID for URL
+        const array = new Uint8Array(16);
         crypto.getRandomValues(array);
         const id = Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
         

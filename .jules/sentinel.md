@@ -17,3 +17,8 @@
 **Vulnerability:** The Cloudflare worker leaked error details to the client on failure and lacked strict security headers.
 **Learning:** Exposing raw error details (`e.message`) on 500 errors can reveal internal infrastructure or logical workings. Additionally, API endpoints must use standard security headers to prevent attacks like clickjacking and XSS framing.
 **Prevention:** Use a generic error message (e.g., 'Internal Server Error') for HTTP 500 responses, while logging the specific error internally (`console.error`). Ensure responses include strict security headers like `X-Content-Type-Options`, `X-Frame-Options`, `Content-Security-Policy`, and `Strict-Transport-Security`.
+
+## 2025-03-31 - Insufficient Entropy in Share IDs
+**Vulnerability:** The Cloudflare worker generated Share IDs using only 4 bytes (32 bits) of randomness via `new Uint8Array(4)`.
+**Learning:** 32 bits of entropy is insufficient to prevent brute-force enumeration attacks or collisions, especially since the Share ID is part of the access token for encrypted payloads. An attacker could potentially guess or iterate through IDs.
+**Prevention:** Always use at least 16 bytes (128 bits) of entropy for generating access identifiers or tokens to ensure they are cryptographically secure and computationally infeasible to guess.
