@@ -17,3 +17,8 @@
 **Vulnerability:** The Cloudflare worker leaked error details to the client on failure and lacked strict security headers.
 **Learning:** Exposing raw error details (`e.message`) on 500 errors can reveal internal infrastructure or logical workings. Additionally, API endpoints must use standard security headers to prevent attacks like clickjacking and XSS framing.
 **Prevention:** Use a generic error message (e.g., 'Internal Server Error') for HTTP 500 responses, while logging the specific error internally (`console.error`). Ensure responses include strict security headers like `X-Content-Type-Options`, `X-Frame-Options`, `Content-Security-Policy`, and `Strict-Transport-Security`.
+
+## 2026-05-19 - Overly Permissive CORS and Weak Share ID Length in Worker
+**Vulnerability:** The Cloudflare worker allowed any origin ('*') via CORS and used short 4-byte (8 hex character) IDs for sharing links.
+**Learning:** Relying on '*' for 'Access-Control-Allow-Origin' can expose endpoints inappropriately, especially if they handle authenticated or sensitive payloads. Furthermore, short identifiers act as weak access tokens, making them susceptible to brute-force enumeration.
+**Prevention:** Only allow explicitly whitelisted origins (e.g., via environment variables) for CORS, and ensure sensitive URLs/identifiers are generated using at least 16 bytes (128 bits) of cryptographic randomness (e.g., `crypto.getRandomValues`).
