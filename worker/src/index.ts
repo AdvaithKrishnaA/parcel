@@ -29,8 +29,22 @@ const getCorsHeaders = (env: Env, request: Request) => {
   return baseHeaders;
 };
 
+function getCorsHeaders(request: Request, env: Env): Record<string, string> {
+  const headers: Record<string, string> = { ...BASE_CORS_HEADERS };
+  const origin = request.headers.get('Origin');
+  if (origin && env.ALLOWED_ORIGINS) {
+    const allowed = env.ALLOWED_ORIGINS.split(',').map((o) => o.trim());
+    if (allowed.includes(origin)) {
+      headers['Access-Control-Allow-Origin'] = origin;
+    }
+  }
+  return headers;
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const corsHeaders = getCorsHeaders(request, env);
+
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: getCorsHeaders(env, request) });
     }
@@ -60,8 +74,8 @@ export default {
           return new Response('Missing blob_key', { status: 400, headers: getCorsHeaders(env, request) });
         }
         
-        // cryptographically secure 8-char random ID for URL
-        const array = new Uint8Array(4);
+        // cryptographically secure 32-char random ID for URL
+        const array = new Uint8Array(16);
         crypto.getRandomValues(array);
         const id = Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
         
