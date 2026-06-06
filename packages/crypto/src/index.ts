@@ -38,15 +38,30 @@ export async function deriveUserMasterKey(password: string): Promise<Uint8Array>
   return out;
 }
 
+const keyCacheHex = new Map<string, CryptoKey>();
+const hexLookup: string[] = [];
+for (let i = 0; i < 256; i++) {
+  hexLookup[i] = i.toString(16).padStart(2, '0');
+}
+
 // Convert raw Uint8Array to CryptoKey for AES-GCM
 export async function importGcmKey(rawKey: Uint8Array): Promise<CryptoKey> {
-  return crypto.subtle.importKey(
+  let str = "";
+  for(let i=0; i<rawKey.length; i++) str += hexLookup[rawKey[i]];
+
+  let cryptoKey = keyCacheHex.get(str);
+  if (cryptoKey) return cryptoKey;
+
+  cryptoKey = await crypto.subtle.importKey(
     'raw',
     new Uint8Array(rawKey),
     { name: 'AES-GCM' },
     false,
     ['encrypt', 'decrypt']
   );
+
+  keyCacheHex.set(str, cryptoKey);
+  return cryptoKey;
 }
 
 // Encrypt payload with AES-GCM
