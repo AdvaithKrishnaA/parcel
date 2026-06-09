@@ -22,3 +22,8 @@
 **Vulnerability:** The Cloudflare worker allowed any origin ('*') via CORS and used short 4-byte (8 hex character) IDs for sharing links.
 **Learning:** Relying on '*' for 'Access-Control-Allow-Origin' can expose endpoints inappropriately, especially if they handle authenticated or sensitive payloads. Furthermore, short identifiers act as weak access tokens, making them susceptible to brute-force enumeration.
 **Prevention:** Only allow explicitly whitelisted origins (e.g., via environment variables) for CORS, and ensure sensitive URLs/identifiers are generated using at least 16 bytes (128 bits) of cryptographic randomness (e.g., `crypto.getRandomValues`).
+
+## 2026-05-19 - Duplicate API Functions Bypassing Security Logic
+**Vulnerability:** A duplicate `getCorsHeaders` function existed in the Cloudflare Worker, and TypeScript compiled the last defined function which used insecure logic that returned `Access-Control-Allow-Origin: '*'` for unauthorized origins.
+**Learning:** Duplicate functions in TypeScript/JavaScript can lead to silent overrides where intended security logic is bypassed by an older, less secure implementation of the same function.
+**Prevention:** Use linters to enforce 'no-dupe-args' and 'no-redeclare', and ensure compilation errors (like 'Duplicate identifier') are treated as blockers before deployment.
