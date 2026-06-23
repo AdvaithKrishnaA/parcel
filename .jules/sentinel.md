@@ -22,3 +22,8 @@
 **Vulnerability:** The Cloudflare worker allowed any origin ('*') via CORS and used short 4-byte (8 hex character) IDs for sharing links.
 **Learning:** Relying on '*' for 'Access-Control-Allow-Origin' can expose endpoints inappropriately, especially if they handle authenticated or sensitive payloads. Furthermore, short identifiers act as weak access tokens, making them susceptible to brute-force enumeration.
 **Prevention:** Only allow explicitly whitelisted origins (e.g., via environment variables) for CORS, and ensure sensitive URLs/identifiers are generated using at least 16 bytes (128 bits) of cryptographic randomness (e.g., `crypto.getRandomValues`).
+
+## 2026-06-23 - Overly Permissive CORS Default
+**Vulnerability:** The Cloudflare worker defaulted to returning `Access-Control-Allow-Origin: *` when the `ALLOWED_ORIGINS` environment variable was not set, allowing any origin to perform requests against the API endpoints.
+**Learning:** Returning a wildcard (`*`) for CORS allows potentially unauthorized origins to interface with sensitive or authenticated endpoints, opening a bypass vulnerability in origin-based security checks.
+**Prevention:** Fail closed with CORS. If no allowed origins are configured, do not emit the `Access-Control-Allow-Origin` header at all, implicitly denying cross-origin requests.
