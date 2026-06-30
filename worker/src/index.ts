@@ -4,8 +4,8 @@ export interface Env {
   ALLOWED_ORIGINS?: string;
 }
 
-const getCorsHeaders = (env: Env, request: Request) => {
-  const baseHeaders = {
+const getCorsHeaders = (env: Env, request: Request): Record<string, string> => {
+  const baseHeaders: Record<string, string> = {
     'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'X-Content-Type-Options': 'nosniff',
@@ -18,7 +18,7 @@ const getCorsHeaders = (env: Env, request: Request) => {
   const origin = request.headers.get('Origin');
 
   if (!env.ALLOWED_ORIGINS) {
-    return { ...baseHeaders, 'Access-Control-Allow-Origin': '*' };
+    return baseHeaders;
   }
 
   const allowed = env.ALLOWED_ORIGINS.split(',').map((s) => s.trim());
@@ -29,24 +29,12 @@ const getCorsHeaders = (env: Env, request: Request) => {
   return baseHeaders;
 };
 
-function getCorsHeaders(request: Request, env: Env): Record<string, string> {
-  const headers: Record<string, string> = { ...BASE_CORS_HEADERS };
-  const origin = request.headers.get('Origin');
-  if (origin && env.ALLOWED_ORIGINS) {
-    const allowed = env.ALLOWED_ORIGINS.split(',').map((o) => o.trim());
-    if (allowed.includes(origin)) {
-      headers['Access-Control-Allow-Origin'] = origin;
-    }
-  }
-  return headers;
-}
-
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    const corsHeaders = getCorsHeaders(request, env);
+    const corsHeaders = getCorsHeaders(env, request);
 
     if (request.method === 'OPTIONS') {
-      return new Response(null, { headers: getCorsHeaders(env, request) });
+      return new Response(null, { headers: corsHeaders });
     }
 
     const url = new URL(request.url);
@@ -55,11 +43,11 @@ export default {
     try {
       const checkAuth = () => {
         if (!env.AUTH_KEY) {
-          return new Response('Server Configuration Error: AUTH_KEY is not set on the Cloudflare Worker.', { status: 500, headers: getCorsHeaders(env, request) });
+          return new Response('Server Configuration Error: AUTH_KEY is not set on the Cloudflare Worker.', { status: 500, headers: corsHeaders });
         }
         const header = request.headers.get('Authorization');
         if (header !== `Bearer ${env.AUTH_KEY}`) {
-          return new Response('Unauthorized: Invalid or missing API Auth Key', { status: 401, headers: getCorsHeaders(env, request) });
+          return new Response('Unauthorized: Invalid or missing API Auth Key', { status: 401, headers: corsHeaders });
         }
         return null;
       };
@@ -71,7 +59,7 @@ export default {
 
         const body = await request.json<any>();
         if (!body.blob_key) {
-          return new Response('Missing blob_key', { status: 400, headers: getCorsHeaders(env, request) });
+          return new Response('Missing blob_key', { status: 400, headers: corsHeaders });
         }
         
         // cryptographically secure 32-char random ID for URL
@@ -83,7 +71,7 @@ export default {
         // We will store the encrypted payload string.
         await env.BUCKET.put(`share/${id}`, body.blob_key);
         return new Response(JSON.stringify({ id }), {
-          headers: { ...getCorsHeaders(env, request), 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
@@ -93,11 +81,11 @@ export default {
         if (id !== 'sync' && id !== 'create') {
           const obj = await env.BUCKET.get(`share/${id}`);
           if (!obj) {
-            return new Response('Not found', { status: 404, headers: getCorsHeaders(env, request) });
+            return new Response('Not found', { status: 404, headers: corsHeaders });
           }
           const data = await obj.text();
           return new Response(data, {
-            headers: { ...getCorsHeaders(env, request), 'Content-Type': 'text/plain' },
+            headers: { ...corsHeaders, 'Content-Type': 'text/plain' },
           });
         }
       }
@@ -108,10 +96,10 @@ export default {
         if (authErr) return authErr;
 
         const userId = path.split('/')[2];
-        if (!userId) return new Response('Bad request', { status: 400, headers: getCorsHeaders(env, request) });
+        if (!userId) return new Response('Bad request', { status: 400, headers: corsHeaders });
         const data = await request.text();
         await env.BUCKET.put(`sync/${userId}`, data);
-        return new Response('OK', { headers: getCorsHeaders(env, request) });
+        return new Response('OK', { headers: corsHeaders });
       }
 
       // GET /sync/:user_id (Editor only)
@@ -120,21 +108,21 @@ export default {
         if (authErr) return authErr;
 
         const userId = path.split('/')[2];
-        if (!userId) return new Response('Bad request', { status: 400, headers: getCorsHeaders(env, request) });
+        if (!userId) return new Response('Bad request', { status: 400, headers: corsHeaders });
         const obj = await env.BUCKET.get(`sync/${userId}`);
         if (!obj) {
-          return new Response('Not found', { status: 404, headers: getCorsHeaders(env, request) });
+          return new Response('Not found', { status: 404, headers: corsHeaders });
         }
         const data = await obj.text();
         return new Response(data, {
-          headers: { ...getCorsHeaders(env, request), 'Content-Type': 'text/plain' },
+          headers: { ...corsHeaders, 'Content-Type': 'text/plain' },
         });
       }
 
-      return new Response('Not found', { status: 404, headers: getCorsHeaders(env, request) });
+      return new Response('Not found', { status: 404, headers: corsHeaders });
     } catch (e: unknown) {
       console.error('Worker fetch error:', e);
-      return new Response('Internal Server Error', { status: 500, headers: getCorsHeaders(env, request) });
+      return new Response('Internal Server Error', { status: 500, headers: corsHeaders });
     }
   },
 };
