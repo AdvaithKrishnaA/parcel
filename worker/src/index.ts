@@ -29,21 +29,8 @@ const getCorsHeaders = (env: Env, request: Request) => {
   return baseHeaders;
 };
 
-function getCorsHeaders(request: Request, env: Env): Record<string, string> {
-  const headers: Record<string, string> = { ...BASE_CORS_HEADERS };
-  const origin = request.headers.get('Origin');
-  if (origin && env.ALLOWED_ORIGINS) {
-    const allowed = env.ALLOWED_ORIGINS.split(',').map((o) => o.trim());
-    if (allowed.includes(origin)) {
-      headers['Access-Control-Allow-Origin'] = origin;
-    }
-  }
-  return headers;
-}
-
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    const corsHeaders = getCorsHeaders(request, env);
 
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: getCorsHeaders(env, request) });
@@ -79,9 +66,23 @@ export default {
         crypto.getRandomValues(array);
         const id = Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
         
+        // Store with custom metadata if set
+        const customMetadata: Record<string, string> = {};
+        if (body.view_once) {
+          customMetadata.view_once = 'true';
+        }
+        if (typeof body.expires_at === 'number') {
+          customMetadata.expires_at = String(body.expires_at);
+        }
+
+        const putOptions: R2PutOptions = {};
+        if (Object.keys(customMetadata).length > 0) {
+          putOptions.customMetadata = customMetadata;
+        }
+
         // store the encrypted payload itself directly in R2 or the blob_key 
         // We will store the encrypted payload string.
-        await env.BUCKET.put(`share/${id}`, body.blob_key);
+        await env.BUCKET.put(`share/${id}`, body.blob_key, putOptions);
         return new Response(JSON.stringify({ id }), {
           headers: { ...getCorsHeaders(env, request), 'Content-Type': 'application/json' },
         });
@@ -95,7 +96,24 @@ export default {
           if (!obj) {
             return new Response('Not found', { status: 404, headers: getCorsHeaders(env, request) });
           }
+
+          const expiresAtStr = obj.customMetadata?.expires_at;
+          const viewOnce = obj.customMetadata?.view_once === 'true';
+
+          if (expiresAtStr) {
+            const expiresAt = Number(expiresAtStr);
+            if (!isNaN(expiresAt) && Date.now() > expiresAt) {
+              await env.BUCKET.delete(`share/${id}`);
+              return new Response('Not found', { status: 404, headers: getCorsHeaders(env, request) });
+            }
+          }
+
           const data = await obj.text();
+
+          if (viewOnce) {
+            await env.BUCKET.delete(`share/${id}`);
+          }
+
           return new Response(data, {
             headers: { ...getCorsHeaders(env, request), 'Content-Type': 'text/plain' },
           });
@@ -137,4 +155,22 @@ export default {
       return new Response('Internal Server Error', { status: 500, headers: getCorsHeaders(env, request) });
     }
   },
+
+  async scheduled(event: any, env: Env, ctx: any): Promise<void> {
+    const now = Date.now();
+    let cursor: string | undefined;
+    do {
+      const list = await env.BUCKET.list({ prefix: 'share/', cursor });
+      for (const obj of list.objects) {
+        const expiresAtStr = obj.customMetadata?.expires_at;
+        if (expiresAtStr) {
+          const expiresAt = Number(expiresAtStr);
+          if (!isNaN(expiresAt) && now > expiresAt) {
+            ctx.waitUntil(env.BUCKET.delete(obj.key));
+          }
+        }
+      }
+      cursor = list.truncated ? list.cursor : undefined;
+    } while (cursor);
+  }
 };

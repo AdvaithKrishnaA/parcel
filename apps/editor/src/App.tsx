@@ -26,11 +26,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Spinner } from '@/components/ui/spinner';
 import type { BundlePayload } from '@parcel/types';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, Share, PlusCircle, RefreshCw, ChevronDown, Edit, Eye, EyeOff } from 'lucide-react';
+import { Plus, Trash2, Share, PlusCircle, RefreshCw, ChevronDown, Edit, Eye, EyeOff, CalendarIcon } from 'lucide-react';
 import { Logo } from '@/components/ui/logo';
 import { toast, Toaster } from 'sonner';
 import { generateKey, encodeBase64Url, encryptPayload } from '@parcel/crypto';
 import { createShare } from '@parcel/sync';
+
+import { cn } from '@/lib/utils';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { format } from 'date-fns';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 
@@ -42,6 +54,10 @@ function App() {
   const [currentBundleId, setCurrentBundleId] = useState<string | null>(null);
   const [sharingId, setSharingId] = useState<string | null>(null);
   const [shareModalData, setShareModalData] = useState<{ url: string, id: string, key: string } | null>(null);
+
+  const [activeShareBundle, setActiveShareBundle] = useState<{ bundle: BundlePayload, id: string } | null>(null);
+  const [expirationOption, setExpirationOption] = useState<'view-once' | '1h' | '6h' | '1d' | '7d' | 'never' | 'custom'>('1d');
+  const [customDate, setCustomDate] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     if (authError) {
@@ -198,7 +214,7 @@ function App() {
 
   const currentBundle = currentBundleId ? state.bundles[currentBundleId] : null;
 
-  const shareBundle = async (bundle: BundlePayload, bundleId: string) => {
+  const shareBundle = async (bundle: BundlePayload, bundleId: string, options?: { expiresAt?: number; viewOnce?: boolean }) => {
     setSharingId(bundleId);
     await forceSync(); // ensure state is persisted before sharing
     try {
@@ -208,7 +224,7 @@ function App() {
       const folderKeyStr = encodeBase64Url(folderKeyBytes);
       const cipher = await encryptPayload(folderKeyBytes, bundle);
       const authHeaderKey = localStorage.getItem('parcel_auth_key') || undefined;
-      const res = await createShare(API_URL, cipher, authHeaderKey);
+      const res = await createShare(API_URL, cipher, authHeaderKey, options);
 
       const viewerUrl = import.meta.env.VITE_VIEWER_URL || 'http://localhost:5174';
       const baseShareUrl = `${viewerUrl}/${res.id}`;
@@ -252,7 +268,11 @@ function App() {
                 onChange={e => setState({ ...state, bundles: { ...state.bundles, [currentBundleId!]: { ...currentBundle, name: e.target.value } } })}
                 className="text-3xl font-bold bg-transparent border-0 focus-visible:ring-0 max-w-xs"
               />
-              <Button onClick={() => shareBundle(currentBundle, currentBundleId!)} disabled={sharingId === currentBundleId} className="gap-2 transition-all">
+              <Button onClick={() => {
+                setActiveShareBundle({ bundle: currentBundle, id: currentBundleId! });
+                setExpirationOption('1d');
+                setCustomDate(undefined);
+              }} disabled={sharingId === currentBundleId} className="gap-2 transition-all">
                 {sharingId === currentBundleId ? <Spinner className="size-4" /> : <Share className="size-4" />}
                 Share
               </Button>
@@ -364,7 +384,12 @@ function App() {
                       <Edit className="size-4 mr-1" /> Edit
                     </Button>
                     <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="sm" disabled={sharingId === id} className="h-8 px-2 cursor-pointer text-muted-foreground hover:text-foreground" onClick={() => shareBundle(bundle, id)}>
+                      <Button variant="ghost" size="sm" disabled={sharingId === id} className="h-8 px-2 cursor-pointer text-muted-foreground hover:text-foreground" onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveShareBundle({ bundle, id });
+                        setExpirationOption('1d');
+                        setCustomDate(undefined);
+                      }}>
                         {sharingId === id ? <Spinner className="size-4 mr-1" /> : <Share className="size-4 mr-1" />}
                         {sharingId === id ? 'Sharing...' : 'Share'}
                       </Button>
@@ -461,6 +486,111 @@ function App() {
               </div>
             </TabsContent>
           </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!activeShareBundle} onOpenChange={(open) => !open && setActiveShareBundle(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Configure Share Link</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 py-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="expiration">Link Expiration</Label>
+              <Select
+                value={expirationOption}
+                onValueChange={(val: any) => {
+                  setExpirationOption(val);
+                  if (val !== 'custom') {
+                    setCustomDate(undefined);
+                  }
+                }}
+              >
+                <SelectTrigger id="expiration">
+                  <SelectValue placeholder="Select expiration" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="never">Never expire</SelectItem>
+                  <SelectItem value="view-once">View once</SelectItem>
+                  <SelectItem value="1h">1 hour</SelectItem>
+                  <SelectItem value="6h">6 hours</SelectItem>
+                  <SelectItem value="1d">1 day</SelectItem>
+                  <SelectItem value="7d">7 days</SelectItem>
+                  <SelectItem value="custom">Custom date...</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {expirationOption === 'custom' && (
+              <div className="flex flex-col gap-2">
+                <Label>Expiration Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !customDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 size-4" />
+                      {customDate ? format(customDate, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={customDate}
+                      onSelect={setCustomDate}
+                      disabled={(date) => {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        return date < today;
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setActiveShareBundle(null)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={sharingId !== null || (expirationOption === 'custom' && !customDate)}
+              onClick={async () => {
+                if (!activeShareBundle) return;
+                let expiresAt: number | undefined;
+                let viewOnce = false;
+
+                if (expirationOption === 'view-once') {
+                  viewOnce = true;
+                } else if (expirationOption === '1h') {
+                  expiresAt = Date.now() + 60 * 60 * 1000;
+                } else if (expirationOption === '6h') {
+                  expiresAt = Date.now() + 6 * 60 * 60 * 1000;
+                } else if (expirationOption === '1d') {
+                  expiresAt = Date.now() + 24 * 60 * 60 * 1000;
+                } else if (expirationOption === '7d') {
+                  expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
+                } else if (expirationOption === 'custom' && customDate) {
+                  const date = new Date(customDate);
+                  date.setHours(23, 59, 59, 999);
+                  expiresAt = date.getTime();
+                }
+
+                await shareBundle(activeShareBundle.bundle, activeShareBundle.id, {
+                  expiresAt,
+                  viewOnce,
+                });
+                setActiveShareBundle(null);
+              }}
+            >
+              {sharingId !== null ? <Spinner className="size-4 mr-2" /> : null}
+              Generate Link
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

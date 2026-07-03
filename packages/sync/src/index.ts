@@ -19,13 +19,27 @@ export async function saveBlob(apiUrl: string, id: string, encryptedBlob: string
   if (!resp.ok) throw new Error('Failed to save blob: ' + resp.statusText);
 }
 
-export async function createShare(apiUrl: string, encryptedPayload: string, authKey?: string): Promise<{ id: string }> {
+export interface ShareOptions {
+  expiresAt?: number;
+  viewOnce?: boolean;
+}
+
+export async function createShare(
+  apiUrl: string,
+  encryptedPayload: string,
+  authKey?: string,
+  options?: ShareOptions
+): Promise<{ id: string }> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (authKey) headers['Authorization'] = `Bearer ${authKey}`;
   const resp = await fetch(`${apiUrl}/create`, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ blob_key: encryptedPayload }),
+    body: JSON.stringify({
+      blob_key: encryptedPayload,
+      expires_at: options?.expiresAt,
+      view_once: options?.viewOnce,
+    }),
   });
   if (!resp.ok) throw new Error('Failed to create share: ' + resp.statusText);
   return await resp.json();
