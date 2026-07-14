@@ -18,7 +18,7 @@ const getCorsHeaders = (env: Env, request: Request) => {
   const origin = request.headers.get('Origin');
 
   if (!env.ALLOWED_ORIGINS) {
-    return { ...baseHeaders, 'Access-Control-Allow-Origin': '*' };
+    return baseHeaders;
   }
 
   const allowed = env.ALLOWED_ORIGINS.split(',').map((s) => s.trim());
